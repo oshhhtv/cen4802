@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Release Readiness Checker</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 650px;
+            margin: 60px auto;
+            padding: 0 20px;
+            line-height: 1.5;
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+        }
+
+        input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 8px;
+            margin-top: 4px;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 10px 18px;
+            cursor: pointer;
+        }
+
+        #result {
+            margin-top: 25px;
+            padding: 15px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Release Readiness Checker</h1>
+
+    <p>
+        Enter the results of a test run to determine whether
+        the application meets the release threshold.
+    </p>
+
+    <label for="passedTests">Tests passed</label>
+    <input id="passedTests" type="number" min="0" value="90">
+
+    <label for="totalTests">Total tests</label>
+    <input id="totalTests" type="number" min="1" value="100">
+
+    <button onclick="checkReadiness()">Check readiness</button>
+
+    <div id="result">
+        Enter test results and select Check readiness.
+    </div>
+
+    <script>
+        async function checkReadiness() {
+            const passedTests =
+                document.getElementById("passedTests").value;
+
+            const totalTests =
+                document.getElementById("totalTests").value;
+
+            const result =
+                document.getElementById("result");
+
+            try {
+                const response = await fetch(
+                    `/api/readiness?passedTests=${passedTests}` +
+                    `&totalTests=${totalTests}`
+                );
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    result.innerHTML =
+                        `<strong>Error:</strong> ${data.error}`;
+                    return;
+                }
+
+                result.innerHTML =
+                    `<h2>${data.status}</h2>` +
+                    `<p><strong>Pass rate:</strong> ${data.passRate}%</p>` +
+                    `<p>${data.message}</p>`;
+
+            } catch (error) {
+                result.innerHTML =
+                    "<strong>Error:</strong> Unable to contact the application.";
+            }
+        }
+    </script>
+</body>
+</html>
