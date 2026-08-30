@@ -18,9 +18,14 @@ public class ReadinessController {
     @GetMapping
     public ReadinessResult checkReadiness(
             @RequestParam int passedTests,
-            @RequestParam int totalTests) {
+            @RequestParam int totalTests,
+            @RequestParam int criticalDefects) {
 
-        return readinessService.evaluate(passedTests, totalTests);
+        return readinessService.evaluate(
+                passedTests,
+                totalTests,
+                criticalDefects
+        );
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

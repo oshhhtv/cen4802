@@ -18,10 +18,16 @@ Then open a web browser and navigate to:
 
 `http://localhost:8080`
 
-## Initial Release Criteria
+## Release Criteria
 
-In the initial version of the application, a release is considered **READY** when at least 90% of its tests pass.
+A release is considered **READY** only when:
 
-Otherwise, the application reports that the release is **NOT READY**.
+- at least 90% of its tests pass, and
+- there are zero unresolved critical defects.
 
-The application also validates its input to prevent invalid test results, such as reporting more passing tests than the total number of tests.
+If either condition is not satisfied, the application reports that the release
+is **NOT READY**.
+
+The application also validates its input to prevent invalid values, such as
+reporting more passing tests than total tests or entering a negative number of
+critical defects.

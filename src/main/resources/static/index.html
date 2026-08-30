@@ -44,20 +44,24 @@
     <h1>Release Readiness Checker</h1>
 
     <p>
-        Enter the results of a test run to determine whether
-        the application meets the release threshold.
+        Enter the results of a test run and the number of unresolved
+        critical defects to determine whether the application is ready
+        for release.
     </p>
 
     <label for="passedTests">Tests passed</label>
-    <input id="passedTests" type="number" min="0" value="90">
+    <input id="passedTests" type="number" min="0" value="95">
 
     <label for="totalTests">Total tests</label>
     <input id="totalTests" type="number" min="1" value="100">
 
+    <label for="criticalDefects">Critical defects</label>
+    <input id="criticalDefects" type="number" min="0" value="0">
+
     <button onclick="checkReadiness()">Check readiness</button>
 
     <div id="result">
-        Enter test results and select Check readiness.
+        Enter release information and select Check readiness.
     </div>
 
     <script>
@@ -68,13 +72,17 @@
             const totalTests =
                 document.getElementById("totalTests").value;
 
+            const criticalDefects =
+                document.getElementById("criticalDefects").value;
+
             const result =
                 document.getElementById("result");
 
             try {
                 const response = await fetch(
                     `/api/readiness?passedTests=${passedTests}` +
-                    `&totalTests=${totalTests}`
+                    `&totalTests=${totalTests}` +
+                    `&criticalDefects=${criticalDefects}`
                 );
 
                 const data = await response.json();
@@ -88,6 +96,7 @@
                 result.innerHTML =
                     `<h2>${data.status}</h2>` +
                     `<p><strong>Pass rate:</strong> ${data.passRate}%</p>` +
+                    `<p><strong>Critical defects:</strong> ${data.criticalDefects}</p>` +
                     `<p>${data.message}</p>`;
 
             } catch (error) {
