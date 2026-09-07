@@ -5,6 +5,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class ReadinessService {
 
+    private static final int RELEASE_THRESHOLD = 95;
+
     public ReadinessResult evaluate(
             int passedTests,
             int totalTests,
@@ -31,12 +33,14 @@ public class ReadinessService {
         double passRate = (passedTests * 100.0) / totalTests;
         passRate = Math.round(passRate * 10.0) / 10.0;
 
-        if (passRate < 90.0) {
+        if (passRate < RELEASE_THRESHOLD) {
             return new ReadinessResult(
                     passRate,
                     criticalDefects,
                     "NOT READY",
-                    "The test pass rate must reach at least 90% before release."
+                    "The test pass rate must reach at least "
+                            + RELEASE_THRESHOLD
+                            + "% before release."
             );
         }
 
@@ -53,7 +57,9 @@ public class ReadinessService {
                 passRate,
                 criticalDefects,
                 "READY",
-                "The test pass rate meets the 90% threshold and no critical defects remain."
+                "The test pass rate meets the "
+                        + RELEASE_THRESHOLD
+                        + "% threshold and no critical defects remain."
         );
     }
 }
