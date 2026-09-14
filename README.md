@@ -28,6 +28,36 @@ The generated executable artifact is:
 
 `target/cen4802-0.0.1-SNAPSHOT.jar`
 
+## Automated Testing
+
+The project uses JUnit through the Spring Boot testing dependencies to provide
+automated unit testing.
+
+Run the complete test suite with:
+
+```cmd
+mvn test
+```
+
+The unit tests for `ReadinessService` verify multiple release-readiness and
+input-validation scenarios, including:
+
+- a release meeting the 95% threshold with no critical defects,
+- a release falling below the required test-pass threshold,
+- critical defects blocking an otherwise ready release,
+- passing tests exceeding the total number of tests,
+- negative critical-defect values, and
+- a total test count of zero.
+
+The tests are also executed automatically during the normal Maven build:
+
+```cmd
+mvn clean package
+```
+
+A build will fail if an automated test fails, preventing an incorrect
+application state from being packaged successfully.
+
 ## Running the Packaged Application
 
 After building the project, run the generated JAR with:
