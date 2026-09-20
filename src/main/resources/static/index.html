@@ -93,9 +93,12 @@
                     return;
                 }
 
+                const failedTests = Number(totalTests) - Number(passedTests);
+
                 result.innerHTML =
                     `<h2>${data.status}</h2>` +
                     `<p><strong>Pass rate:</strong> ${data.passRate}%</p>` +
+                    `<p><strong>Failed tests:</strong> ${failedTests}</p>` +
                     `<p><strong>Critical defects:</strong> ${data.criticalDefects}</p>` +
                     `<p>${data.message}</p>`;
 
