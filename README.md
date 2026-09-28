@@ -127,6 +127,48 @@ For development purposes, the application can also be launched through the Maven
 mvnw.cmd spring-boot:run
 ```
 
+## Containerization
+
+The application can be packaged and executed using Docker Desktop with the WSL 2 backend.
+
+The existing Maven build process remains responsible for compiling, testing, and packaging the application:
+
+```bash
+mvn package
+```
+
+This produces the executable Spring Boot JAR:
+
+```text
+target/cen4802-0.0.1-SNAPSHOT.jar
+```
+
+The Dockerfile does not rebuild the Java project. Instead, it uses the previously packaged Maven artifact and places it into a Java 21 runtime image.
+
+Build the container image with:
+
+```bash
+docker build -t cen4802-readiness:v2 .
+```
+
+Run the container with:
+
+```bash
+docker run -d --name cen4802-readiness-v2 -p 8080:8080 cen4802-readiness:v2
+```
+
+The application is then available at:
+
+```text
+http://localhost:8080
+```
+
+The `.dockerignore` file excludes unnecessary repository and generated build content from the Docker build context while retaining the packaged application JAR required by the Dockerfile.
+
+## Tests Needed for Release Threshold
+
+The web interface also displays the number of additional passing tests required to reach the 95% release-readiness threshold. This feature was added before rebuilding the Maven package and Docker image to verify that the rebuilt container was running the updated application.
+
 ## Release Criteria
 
 A release is considered **READY** only when:
