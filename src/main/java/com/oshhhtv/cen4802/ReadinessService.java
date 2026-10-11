@@ -8,7 +8,7 @@ import java.util.List;
 @Service
 public class ReadinessService {
 
-    private static final int RELEASE_THRESHOLD = 96;
+    private static final int RELEASE_THRESHOLD = 95;
 
     public ReadinessResult evaluate(
             int passedTests,
