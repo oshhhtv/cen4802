@@ -12,12 +12,22 @@ permissions:
 
 jobs:
   build:
-    name: Build and Test
+    name: Build, Test and Containerise
     runs-on: ubuntu-latest
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+
+      - name: Record source revision and image tag
+        shell: bash
+        run: |
+          SOURCE_REVISION="$(git rev-parse HEAD)"
+          IMAGE_TAG="cen4802-readiness:ci-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}"
+          echo "SOURCE_REVISION=$SOURCE_REVISION" >> "$GITHUB_ENV"
+          echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
+          echo "Checked-out source revision: $SOURCE_REVISION"
+          echo "Container image tag: $IMAGE_TAG"
 
       - name: Set up Java 21
         uses: actions/setup-java@v6
@@ -29,9 +39,49 @@ jobs:
       - name: Build and run unit tests
         run: mvn --batch-mode clean package
 
+      - name: Upload unit test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-reports
+          path: target/surefire-reports/
+          if-no-files-found: warn
+
       - name: Upload executable JAR
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: release-readiness-checker
           path: target/cen4802-0.0.1-SNAPSHOT.jar
           if-no-files-found: error
+
+      - name: Build container image
+        if: success()
+        shell: bash
+        run: |
+          docker build \
+            --label "org.opencontainers.image.revision=$SOURCE_REVISION" \
+            --tag "$IMAGE_TAG" .
+          docker image inspect "$IMAGE_TAG" --format 'Image ID: {{.Id}}'
+
+      - name: Export container image and record provenance
+        if: success()
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/container-image"
+          docker image save "$IMAGE_TAG" | gzip > "$RUNNER_TEMP/container-image/image.tar.gz"
+          {
+            echo "Source revision: $SOURCE_REVISION"
+            echo "Image tag: $IMAGE_TAG"
+            docker image inspect "$IMAGE_TAG" --format 'Image ID: {{.Id}}'
+            echo "CI run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          } | tee "$RUNNER_TEMP/container-image/image-metadata.txt"
+
+      - name: Upload container image
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-image
+          path: ${{ runner.temp }}/container-image/
+          if-no-files-found: error
+          compression-level: 0
