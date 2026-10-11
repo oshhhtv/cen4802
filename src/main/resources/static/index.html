@@ -104,7 +104,26 @@
                     `<p><strong>Failed tests:</strong> ${failedTests}</p>` +
                     `<p><strong>Tests needed for 95%:</strong> ${testsNeeded}</p>` +
                     `<p><strong>Critical defects:</strong> ${data.criticalDefects}</p>` +
-                    `<p>${data.message}</p>`;
+                    `<p>${data.message}</p>` +
+                    `<h3>Release blockers</h3>` +
+                    `<div id="releaseBlockers"></div>`;
+
+                const blockersContainer =
+                    document.getElementById("releaseBlockers");
+
+                if (data.blockers.length === 0) {
+                    blockersContainer.textContent = "No release blockers.";
+                } else {
+                    const list = document.createElement("ul");
+
+                    for (const blocker of data.blockers) {
+                        const item = document.createElement("li");
+                        item.textContent = blocker;
+                        list.appendChild(item);
+                    }
+
+                    blockersContainer.appendChild(list);
+                }
 
             } catch (error) {
                 result.innerHTML =
