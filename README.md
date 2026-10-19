@@ -165,6 +165,62 @@ http://localhost:8080
 
 The `.dockerignore` file excludes unnecessary repository and generated build content from the Docker build context while retaining the packaged application JAR required by the Dockerfile.
 
+## Kubernetes Deployment
+
+The containerized application can be deployed locally using Kubernetes provided by Docker Desktop. The deployment reuses the existing `cen4802-readiness:v2` container image produced through the previously established Maven and Docker workflow.
+
+Kubernetes configuration files are stored in:
+
+```text
+k8s/deployment.yaml
+k8s/service.yaml
+```
+
+The Deployment initially requests two application replicas and runs the existing container image on port 8080. The Service uses the `app: cen4802-readiness` label to provide a stable network endpoint for the application Pods.
+
+Deploy the application with:
+
+```bash
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+```
+
+Verify the deployment with:
+
+```bash
+kubectl get deployment cen4802-readiness
+kubectl get pods -l app=cen4802-readiness
+kubectl get service cen4802-readiness
+```
+
+For local browser access, forward host port 8081 to the Kubernetes Service:
+
+```bash
+kubectl port-forward service/cen4802-readiness 8081:8080
+```
+
+The deployed application is then available at:
+
+```text
+http://localhost:8081
+```
+
+The Deployment can be managed independently of the application build process. For example, the application was scaled from two replicas to three with:
+
+```bash
+kubectl scale deployment cen4802-readiness --replicas=3
+```
+
+Kubernetes created an additional Pod and reconciled the Deployment to a healthy `3/3` state.
+
+The deployed resources can be removed using:
+
+```bash
+kubectl delete -f k8s/service.yaml -f k8s/deployment.yaml
+```
+
+After deletion, the Deployment and Service return `NotFound`, and no Pods with the application label remain.
+
 ## Tests Needed for Release Threshold
 
 The web interface also displays the number of additional passing tests required to reach the 95% release-readiness threshold. This feature was added before rebuilding the Maven package and Docker image to verify that the rebuilt container was running the updated application.
