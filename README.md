@@ -221,6 +221,62 @@ kubectl delete -f k8s/service.yaml -f k8s/deployment.yaml
 
 After deletion, the Deployment and Service return `NotFound`, and no Pods with the application label remain.
 
+## Application Logging
+
+The Release Readiness Checker uses Spring Boot's default SLF4J and Logback logging stack. No additional logging dependency is required beyond the existing Spring Boot application dependencies.
+
+Application logging is configured in:
+
+```text
+src/main/resources/application.properties
+```
+
+The default configuration records application messages at the `INFO` level and above:
+
+```properties
+logging.level.root=INFO
+logging.level.com.oshhhtv.cen4802=INFO
+```
+
+Logs are written to both the console and:
+
+```text
+logs/release-readiness.log
+```
+
+The configured format includes the timestamp, severity level, thread, logger name, and descriptive message. The generated `logs/` directory is ignored by Git because log files are runtime output rather than project source.
+
+Application events use several logging levels:
+
+- `DEBUG` records detailed readiness calculations and diagnostic values.
+- `INFO` records routine readiness requests and successful release-ready evaluations.
+- `WARN` records release-blocking conditions and rejected invalid input.
+- `ERROR` records validation failures handled by the controller, including exception details useful for troubleshooting.
+
+For example, a normal readiness request records the supplied test and defect counts, while invalid values such as more passed tests than total tests produce both a warning and a handled error record.
+
+The standard application configuration suppresses `DEBUG` output to avoid unnecessary operational noise. Diagnostic logging can be enabled temporarily at runtime without changing the packaged application:
+
+```bash
+java -jar target/cen4802-0.0.1-SNAPSHOT.jar --server.port=8083 --logging.level.com.oshhhtv.cen4802=DEBUG --logging.file.name=logs/release-readiness-debug.log
+```
+
+This runtime override adds calculation-level diagnostic entries while leaving the application's behaviour unchanged.
+
+Logs can be examined and filtered using standard command-line tools. For example:
+
+```cmd
+findstr /c:" WARN " /c:" ERROR " logs\release-readiness.log
+```
+
+or a specific request can be isolated using contextual values:
+
+```cmd
+findstr /c:"passedTests=101" logs\release-readiness.log
+```
+
+During logging verification, repeated application requests produced more than 100 meaningful log entries. Filtering the larger log set made it possible to isolate release-blocking warnings and validation errors without inspecting every routine entry individually.
+
 ## Tests Needed for Release Threshold
 
 The web interface also displays the number of additional passing tests required to reach the 95% release-readiness threshold. This feature was added before rebuilding the Maven package and Docker image to verify that the rebuilt container was running the updated application.
