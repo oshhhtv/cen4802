@@ -277,6 +277,66 @@ findstr /c:"passedTests=101" logs\release-readiness.log
 
 During logging verification, repeated application requests produced more than 100 meaningful log entries. Filtering the larger log set made it possible to isolate release-blocking warnings and validation errors without inspecting every routine entry individually.
 
+## Systems Monitoring
+
+The Release Readiness Checker uses Docker Desktop's built-in monitoring facilities to observe container CPU utilization, memory consumption, process/thread counts, and operational status.
+
+### Monitoring Environment
+
+The application is packaged using the existing Maven and Docker workflow:
+
+```cmd
+mvn package
+docker build -t cen4802-readiness:monitoring-a8 .
+docker run -d --name cen4802-monitor-a8 -p 8084:8080 cen4802-readiness:monitoring-a8
+```
+
+The application is accessible at `http://localhost:8084`. Docker provides resource measurements for the running container through:
+
+```cmd
+docker stats --no-stream cen4802-monitor-a8
+```
+
+### Workload Generation
+
+The `scripts/monitor-workload.ps1` script generates concurrent HTTP requests against the application readiness endpoint. The workload can be reproduced using:
+
+```cmd
+powershell -NoProfile -ExecutionPolicy Bypass -File "scripts\monitor-workload.ps1" -DurationSeconds 90 -Workers 8
+```
+
+This executes readiness evaluations through eight concurrent workers for approximately 90 seconds and reports successful and failed HTTP requests.
+
+### Monitoring Results
+
+Six container measurements were collected under each operating condition.
+
+| Measurement | Idle Baseline | Workload | Post-Workload Recovery |
+|---|---:|---:|---:|
+| Average CPU utilization | 0.107% | 164.75% | 0.085% |
+| Average memory consumption | 186.67 MiB | 223.17 MiB | 220.70 MiB |
+| PIDs | 48 | 48 | 48 |
+
+During the completed workload, the application successfully processed 59,367 HTTP requests with zero reported failures.
+
+Docker CPU utilization exceeded 100% during workload execution because container CPU usage can span multiple logical processors. CPU consumption returned to approximately its original idle level after the workload completed.
+
+Memory consumption increased under load and remained above its initial baseline afterward. This may reflect retained JVM memory allocations, although longer-term monitoring would be necessary to investigate possible memory growth.
+
+### Operational Investigation
+
+The following commands were used to examine container health and application functionality:
+
+```cmd
+docker inspect cen4802-monitor-a8
+docker top cen4802-monitor-a8
+docker logs --tail 20 cen4802-monitor-a8
+```
+
+The investigation confirmed that the container remained running, its restart count was zero, and Docker reported no out-of-memory termination. A subsequent HTTP request returned `200 OK` and a valid `READY` response.
+
+These measurements demonstrate that the application continued functioning after the workload and that its elevated CPU activity was temporary. They do not constitute a formal capacity or memory-leak assessment.
+
 ## Tests Needed for Release Threshold
 
 The web interface also displays the number of additional passing tests required to reach the 95% release-readiness threshold. This feature was added before rebuilding the Maven package and Docker image to verify that the rebuilt container was running the updated application.
