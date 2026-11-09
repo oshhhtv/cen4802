@@ -1,10 +1,11 @@
 
 param(
     [int]$DurationSeconds = 60,
-    [int]$Workers = 8
+    [int]$Workers = 8,
+    [string]$BaseUrl = "http://localhost:8084"
 )
 
-$url = "http://localhost:8084/api/readiness?passedTests=95&totalTests=100&criticalDefects=0"
+$url = "$BaseUrl/api/readiness?passedTests=95&totalTests=100&criticalDefects=0"
 
 Write-Host "===== CEN4802 MONITORING WORKLOAD ====="
 Write-Host "Duration: $DurationSeconds seconds"

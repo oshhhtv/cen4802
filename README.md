@@ -365,3 +365,49 @@ For example, 95 passing tests out of 100 produce five failed tests.
 This enhancement is implemented in the browser interface and does not modify the existing release-readiness rules or backend API.
 
 The existing JUnit tests verify the Java application logic. The failed-test counter is a JavaScript feature and was additionally verified through manual browser testing.
+
+## Assignment 9 - JVM Profiling and Logging Optimisation
+
+### Profiling Environment
+
+Java Flight Recorder (JFR), jcmd and the jfr command-line utility were used to investigate the Spring Boot application running on Java 25. The profiling experiment compared normal INFO application logging against reduced WARN logging. Both configurations used port 8085, eight concurrent workload workers and a configured duration of 90 seconds.
+
+### Reproducing the Quiet Configuration
+
+The default application.properties retains INFO logging. The optional application-quiet.properties profile selects port 8085, WARN logging for com.oshhhtv.cen4802 and a separate quiet log file.
+
+```cmd
+mvn package
+java -jar target\cen4802-0.0.1-SNAPSHOT.jar --spring.profiles.active=quiet
+```
+
+In another terminal, generate application activity using:
+
+```cmd
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\monitor-workload.ps1 -DurationSeconds 90 -Workers 8 -BaseUrl http://localhost:8085
+```
+
+JFR recordings were captured using jcmd JFR.start with settings=profile and exported using jcmd JFR.stop. The jfr view utility was used to examine CPU samples, allocation pressure and garbage-collection pauses.
+
+### Experimental Results
+
+| Measurement | INFO logging | WARN logging |
+| --- | ---: | ---: |
+| Successful requests | 653,845 | 1,323,796 |
+| Failed requests | 0 | 0 |
+| Average GC pause | 0.746 ms | 0.772 ms |
+| Maximum GC pause | 4.13 ms | 3.55 ms |
+| P95 GC pause | 1.68 ms | 1.13 ms |
+| Relative byte-array allocation pressure | 22.41% | 8.64% |
+
+Reducing application logging coincided with a 102.5% increase in successful request count, approximately 2.02 times the original result. JFR CPU sampling showed broadly comparable overall machine utilisation and relatively short garbage-collection pauses in both configurations. Logback LoggingEvent appeared among the leading allocation classes under INFO logging but was absent from the top 25 under WARN logging.
+
+### Diagnostic Verification
+
+The quiet profile returned HTTP 200 and READY for valid inputs. An invalid request returned HTTP 400 while preserving service WARN and controller ERROR log messages. Routine request and release-ready INFO messages were suppressed.
+
+### Interpretation and Limitations
+
+The results support reduced routine logging as a promising performance optimisation, but the experiment consisted of one measured run per configuration. The JFR recordings lasted 603 and 701 seconds respectively, so whole-recording event totals cannot be treated as equivalent workload measurements. Relative allocation percentages are not absolute allocated-byte counts. Additional repeated, alternating trials would be needed to establish a reliable causal performance estimate.
+
+Profiling recordings in target and generated runtime logs are diagnostic outputs and are not required in the submitted source archive.
