@@ -411,3 +411,121 @@ The quiet profile returned HTTP 200 and READY for valid inputs. An invalid reque
 The results support reduced routine logging as a promising performance optimisation, but the experiment consisted of one measured run per configuration. The JFR recordings lasted 603 and 701 seconds respectively, so whole-recording event totals cannot be treated as equivalent workload measurements. Relative allocation percentages are not absolute allocated-byte counts. Additional repeated, alternating trials would be needed to establish a reliable causal performance estimate.
 
 Profiling recordings in target and generated runtime logs are diagnostic outputs and are not required in the submitted source archive.
+
+## Assignment 10 - Infrastructure as Code with Terraform
+
+### Infrastructure Environment
+
+Assignment 10 introduces Infrastructure as Code (IaC) using HashiCorp Terraform 1.17.1 and the `kreuzwerker/docker` provider version 4.6.0.
+
+Terraform manages three resources supporting the existing Spring Boot application:
+
+- `docker_image.app` - Builds the application image from the existing Dockerfile.
+- `docker_network.app` - Creates an isolated Docker bridge network.
+- `docker_container.app` - Runs the Java application with explicitly defined resource and networking settings.
+
+The infrastructure configuration is stored in `terraform/main.tf`. The `.terraform.lock.hcl` file records the selected provider dependency.
+
+The infrastructure uses Docker Desktop locally and requires no cloud account or paid services.
+
+### Infrastructure Lifecycle
+
+The project was initialised and validated using:
+
+```cmd
+terraform -chdir=terraform init
+terraform -chdir=terraform validate
+```
+
+Validation completed successfully.
+
+The initial infrastructure execution plan proposed creating three resources:
+
+```text
+Plan: 3 to add, 0 to change, 0 to destroy.
+```
+
+The initial deployment used a 512 MiB memory limit and exposed the application at `http://localhost:8086`.
+
+Terraform successfully provisioned the application image, bridge network and container. Docker inspection confirmed their existence and configuration, while an HTTP request to the application's readiness endpoint returned `200 OK` and `READY`.
+
+### Infrastructure Modification
+
+The Terraform configuration was modified to increase the container memory limit from 512 MiB to 768 MiB and change the published host port from 8086 to 8087.
+
+Terraform determined that the container required replacement because of the published-port change:
+
+```text
+Plan: 1 to add, 0 to change, 1 to destroy.
+```
+
+Applying the plan replaced the existing container while preserving the application image and network.
+
+Independent Docker inspection confirmed the updated memory limit of 805,306,368 bytes and the new port mapping of `127.0.0.1:8087` to container port `8080`.
+
+The application continued returning `HTTP 200` and `READY` after replacement.
+
+### Infrastructure Removal
+
+A Terraform destruction plan identified the three managed resources:
+
+```text
+Plan: 0 to add, 0 to change, 3 to destroy.
+```
+
+The saved plan was applied successfully:
+
+```text
+Apply complete! Resources: 0 added, 0 changed, 3 destroyed.
+```
+
+Terraform state was empty after removal. Independent Docker commands confirmed that the Assignment 10 container, image and network were absent.
+
+Four application images from previous assignments remained available, demonstrating that the infrastructure removal was limited to the intended resources.
+
+### Reproducing the Infrastructure
+
+Prerequisites:
+
+- Java 21 or later
+- Maven
+- Docker Desktop with its Linux container engine running
+- Terraform 1.17.1 or a compatible version
+
+From the project root:
+
+```cmd
+mvn package
+terraform -chdir=terraform init
+terraform -chdir=terraform validate
+terraform -chdir=terraform plan
+terraform -chdir=terraform apply
+```
+
+The retained Terraform configuration represents the final 768 MiB deployment on host port 8087.
+
+After provisioning, the application is accessible at:
+
+```text
+http://localhost:8087
+```
+
+To remove the deployment:
+
+```cmd
+terraform -chdir=terraform destroy
+```
+
+Terraform will request confirmation before making changes when no saved execution plan is supplied.
+
+### Implementation Analysis
+
+Terraform replaces manual Docker resource creation with a declarative configuration that defines the intended infrastructure state.
+
+During initial provisioning, Terraform created the application image, dedicated network and container. During modification, it identified the published-port change as requiring container replacement while retaining resources that did not need modification.
+
+The final destruction operation removed only the resources managed by this Terraform configuration.
+
+One limitation is that the local deployment requires Docker Desktop, a previously built application JAR and local Terraform state. Because the demonstration uses a single container, replacing it briefly interrupts application availability. A production deployment could improve availability through multiple application instances and a load balancer.
+
+Terraform provider downloads, local state files, saved execution plans and generated application build output are excluded from source submission.
